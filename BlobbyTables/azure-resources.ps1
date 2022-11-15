@@ -30,7 +30,7 @@
 # ----------------------------------------------------------------------
 # -- Assign vars for script.
 
-$baseName = "demo04"
+$baseName = "demo15"
 $rgName = "${baseName}-rg"
 $location = "eastus"
 $storageAcctName = "${baseName}storage"
