@@ -1,4 +1,5 @@
 ﻿using Azure;
+using Azure.Data.Tables;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using BlobbyConsole;
@@ -14,6 +15,11 @@ internal class Program
         Settings settings = GetSettings();
         try
         {
+
+            await CreateATable(settings);
+
+            PromptToContinue("create a blob");
+
             await CreateContainerAndUploadAsync(settings);
             
             PromptToContinue("list contents");
@@ -194,4 +200,10 @@ internal class Program
         await containerClient.DeleteIfExistsAsync();
     }
 
+    private static async Task CreateATable(Settings settings)
+    {
+        TableServiceClient serviceClient= new TableServiceClient(settings.ConnectionString);        
+        TableClient tableClient = serviceClient.GetTableClient("temp");        
+        await tableClient.CreateIfNotExistsAsync();        
+    }
 }
