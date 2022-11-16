@@ -11,9 +11,22 @@ internal class Program
 
     private static async Task Main(string[] args)
     {
+        Settings settings = GetSettings();
+        try
+        {
+            await CreateContainerAndUploadAsync(settings);
+        }
+        catch (RequestFailedException ex)
+        {
+            Console.WriteLine($"ERROR: {ex.Message}");
+        }
+    }
+
+    private static Settings GetSettings()
+    {
         string configFile = Path.Join(
-    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-    "KeepLocal", "blobby-config.json");
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        "KeepLocal", "blobby-config.json");
 
         if (!File.Exists(configFile))
         {
@@ -38,39 +51,31 @@ internal class Program
             Console.WriteLine("ERROR: Cannot get 'ConnectionString' setting.");
             Environment.Exit(1);
         }
+        
+        return settings;
+    }
 
-        try
-        {
-            await CreateContainerAndUploadAsync(settings);
-        }
-        catch (RequestFailedException ex)
-        {
-            Console.WriteLine($"ERROR: {ex.Message}");
-        }
+    private static async Task CreateContainerAndUploadAsync(Settings settings)
+    {
+        Console.WriteLine("New BlobServiceClient.");
+        BlobServiceClient serviceClient = new BlobServiceClient(settings.ConnectionString);
 
+        Console.WriteLine("Get BlobContainerClient.");
+        BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(containerName);
 
-        static async Task CreateContainerAndUploadAsync(Settings settings)
-        {
-            Console.WriteLine("New BlobServiceClient.");
-            BlobServiceClient serviceClient = new BlobServiceClient(settings.ConnectionString);
+        Console.WriteLine("Create BlobContainer.");
+        await containerClient.CreateIfNotExistsAsync(PublicAccessType.BlobContainer);
 
-            Console.WriteLine("Get BlobContainerClient.");
-            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(containerName);
+        Console.WriteLine("Get BlobClient.");
+        BlobClient blobClient = containerClient.GetBlobClient(blobName);
 
-            Console.WriteLine("Create BlobContainer.");
-            await containerClient.CreateIfNotExistsAsync(PublicAccessType.BlobContainer);
+        Console.WriteLine($"URI: {blobClient.Uri}");
 
-            Console.WriteLine("Get BlobClient.");
-            BlobClient blobClient = containerClient.GetBlobClient(blobName);
+        Console.WriteLine($"Upload {blobName}");
+        using FileStream fs = File.OpenRead(blobName);
 
-            Console.WriteLine($"URI: {blobClient.Uri}");
+        await blobClient.UploadAsync(fs, new BlobHttpHeaders { ContentType = "text/csv" });
 
-            Console.WriteLine($"Upload {blobName}");
-            using FileStream fs = File.OpenRead(blobName);
-
-            await blobClient.UploadAsync(fs, new BlobHttpHeaders { ContentType = "text/csv" });
-
-            Console.WriteLine("Uploaded.");
-        }
+        Console.WriteLine("Uploaded.");
     }
 }

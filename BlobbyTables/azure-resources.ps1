@@ -52,10 +52,11 @@ az storage account create `
 #    Example found in Microsoft Docs: "Mount a file share to a Python function app - Azure CLI"
 #    https://docs.microsoft.com/en-us/azure/azure-functions/scripts/functions-cli-mount-files-storage-linux
 
-$storageKey = $(az storage account keys list -g $rgName -n $storageAcctName --query '[0].value' -o tsv)
+# $storageKey = $(az storage account keys list -g $rgName -n $storageAcctName --query '[0].value' -o tsv)
 
 
 # -- Create storage containers.
 #    https://docs.microsoft.com/en-us/cli/azure/storage/container?view=azure-cli-latest#az-storage-container-create
 
-az storage container create --account-key $storageKey --account-name $storageAcctName -n "blobby1"
+# az storage container create --account-key $storageKey --account-name $storageAcctName -n "blobby1"
+
