@@ -15,15 +15,19 @@ internal class Program
         try
         {
             await CreateContainerAndUploadAsync(settings);
-            PromptToContinue();
+            
+            PromptToContinue("list contents");
 
             await ListContainerContentsAsync(settings);
-            PromptToContinue();
+            
+            PromptToContinue("download");
 
             await DownloadTheBlobAsync(settings);
-            PromptToContinue();
+            
+            PromptToContinue("delete container");
 
             await DeleteContainerAsync(settings);
+
             PromptToContinue("finish");
         }
         catch (RequestFailedException ex)
@@ -94,7 +98,24 @@ internal class Program
 
         await blobClient.UploadAsync(fs, new BlobHttpHeaders { ContentType = "text/csv" });
 
-        Console.WriteLine("Uploaded.");
+        Console.WriteLine("Set metadata.");
+
+        IDictionary<string, string> metadata = new Dictionary<string, string>();
+        metadata["user_name"] = "heydude";
+        metadata["user_org"] = "dontcallmedude";
+        await blobClient.SetMetadataAsync(metadata);
+
+        Console.WriteLine("List properties.");
+
+        BlobProperties bp = await blobClient.GetPropertiesAsync();
+        Console.WriteLine($"          ETag: {bp.ETag}");
+        Console.WriteLine($"  LastModified: {bp.LastModified}");
+        Console.WriteLine($"   ContentType: {bp.ContentType}");
+        Console.WriteLine($"      BlobType: {bp.BlobType}");
+        foreach (var item in bp.Metadata)
+        {
+            Console.WriteLine($"      Metadata: {item.Key} = '{item.Value}'");
+        }
     }
 
     private static async Task ListContainerContentsAsync(Settings settings)
@@ -103,15 +124,36 @@ internal class Program
         BlobServiceClient serviceClient = new BlobServiceClient(settings.ConnectionString);
 
         Console.WriteLine("List containers:");
-        await foreach (BlobContainerItem item in serviceClient.GetBlobContainersAsync())
+        await foreach (BlobContainerItem container in serviceClient.GetBlobContainersAsync())
         {
-            Console.WriteLine($"  Container: {item.Name}");
+            Console.WriteLine($"  Container: {container.Name}");
 
-            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(item.Name);
+            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(container.Name);
 
             await foreach (BlobItem blob in containerClient.GetBlobsAsync())
             {
                 Console.WriteLine($"    Blob: {blob.Name}");
+                Console.WriteLine($"          ETag: {blob.Properties.ETag}");
+                Console.WriteLine($"  LastModified: {blob.Properties.LastModified}");
+                Console.WriteLine($"   ContentType: {blob.Properties.ContentType}");
+                Console.WriteLine($"      BlobType: {blob.Properties.BlobType}");
+
+                Console.WriteLine("Metadata from BlobItem:");
+                foreach (var item in blob.Metadata)
+                {
+                    Console.WriteLine($"  Metadata: {item.Key} = '{item.Value}'");
+                }
+
+                // It appears that even though the BlobItem has a Metadata property
+                // it is not the same as that from the BlobClient's properties.
+
+                Console.WriteLine("Metadata from BlobClient.GetPropertiesAsync:");
+                BlobClient blobClient = containerClient.GetBlobClient(blob.Name);
+                BlobProperties bp = await blobClient.GetPropertiesAsync();
+                foreach (var item in bp.Metadata)
+                {
+                    Console.WriteLine($"  Metadata: '{item.Key}'='{item.Value}'");
+                }
             }
         }
     }
