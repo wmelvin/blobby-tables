@@ -9,14 +9,14 @@ internal class Program
 {
     private static readonly string _containerName = "blobby";
     private static readonly string _blobName = "test.csv";
+    private static readonly string _tableName = "uploads";
 
     private static async Task Main(string[] args)
     {
         Settings settings = GetSettings();
         try
         {
-
-            await CreateATable(settings);
+            await CreateUploadsTable(settings);
 
             PromptToContinue("create a blob");
 
@@ -122,6 +122,17 @@ internal class Program
         {
             Console.WriteLine($"      Metadata: {item.Key} = '{item.Value}'");
         }
+
+        DateTime whenUploaded = DateTime.UtcNow;
+        string rowKey = $"{whenUploaded.ToString("yyyyMMdd_HHmmss_K")}:{blobClient.Name}";
+
+        await SaveUploadInfoToTable(settings, new UploadsTableEntity
+        {
+            FileName = _blobName,
+            WhenUploaded = whenUploaded,
+            PartitionKey = "uploads",
+            RowKey = rowKey,
+        });
     }
 
     private static async Task ListContainerContentsAsync(Settings settings)
@@ -200,10 +211,19 @@ internal class Program
         await containerClient.DeleteIfExistsAsync();
     }
 
-    private static async Task CreateATable(Settings settings)
+    private static async Task CreateUploadsTable(Settings settings)
     {
-        TableServiceClient serviceClient= new TableServiceClient(settings.ConnectionString);        
-        TableClient tableClient = serviceClient.GetTableClient("temp");        
-        await tableClient.CreateIfNotExistsAsync();        
+        Console.WriteLine($"Create table {_tableName}");
+        TableServiceClient serviceClient = new TableServiceClient(settings.ConnectionString);        
+        TableClient tableClient = serviceClient.GetTableClient(_tableName);
+        await tableClient.CreateIfNotExistsAsync();
+    }
+
+    private static async Task SaveUploadInfoToTable(Settings settings, UploadsTableEntity info)
+    {
+        Console.WriteLine($"Save to table {_tableName}");
+        TableServiceClient serviceClient = new TableServiceClient(settings.ConnectionString);
+        TableClient tableClient = serviceClient.GetTableClient(_tableName);
+        await tableClient.UpsertEntityAsync(info);
     }
 }
