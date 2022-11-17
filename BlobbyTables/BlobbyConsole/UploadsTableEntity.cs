@@ -7,6 +7,8 @@ namespace BlobbyConsole
     {
         public string FileName { get; set; }
         public DateTime WhenUploaded { get; set; }
+
+        // Required to implement ITableEntity:
         public string PartitionKey { get; set; }
         public string RowKey { get; set; }
         public DateTimeOffset? Timestamp { get; set; }
